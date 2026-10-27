@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 APP_NAME = "MicMonitor"
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 APP_DIR = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / APP_NAME
 HISTORY_FILE = APP_DIR / "history.jsonl"
 CONFIG_FILE = APP_DIR / "config.json"
