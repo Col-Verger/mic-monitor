@@ -9,9 +9,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from string import Formatter
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import i18n  # noqa: E402
 from mic_monitor import (  # noqa: E402
     Candidate,
     Change,
@@ -36,6 +38,58 @@ from mic_monitor import (  # noqa: E402
 def snap(volume=0.8, muted=False, device="mic-1", name="Микрофон", sessions=()):
     return Snapshot(device_id=device, device_name=name, volume=volume,
                     muted=muted, peak=0.0, sessions=tuple(sessions))
+
+
+def setUpModule():
+    i18n.set_language("ru")
+
+
+class I18nTest(unittest.TestCase):
+    def tearDown(self):
+        i18n.set_language("ru")
+
+    def test_same_keys_in_both_languages(self):
+        en = set(i18n.TRANSLATIONS["en"])
+        ru = set(i18n.TRANSLATIONS["ru"])
+        self.assertEqual(en - ru, set(), "ключи без русского перевода")
+        self.assertEqual(ru - en, set(), "ключи без английского текста")
+
+    def test_no_empty_strings(self):
+        for lang, table in i18n.TRANSLATIONS.items():
+            for key, value in table.items():
+                self.assertTrue(value.strip(), f"пустой перевод {lang}/{key}")
+
+    def test_same_placeholders(self):
+        fmt = Formatter()
+        for key, en_text in i18n.TRANSLATIONS["en"].items():
+            en_fields = {name for _, name, _, _ in fmt.parse(en_text) if name}
+            ru_fields = {name for _, name, _, _ in fmt.parse(i18n.TRANSLATIONS["ru"][key]) if name}
+            self.assertEqual(en_fields, ru_fields, f"разные подстановки в {key}")
+
+    def test_unknown_language_ignored(self):
+        i18n.set_language("ru")
+        self.assertEqual(i18n.set_language("de"), "ru")
+
+    def test_detect_language(self):
+        self.assertIn(i18n.detect_language(), i18n.LANGUAGES)
+
+    def test_english_rendering(self):
+        i18n.set_language("en")
+        self.assertEqual(confidence([]), "no data")
+        self.assertEqual(fmt_value("mute", True), "muted")
+        ch = Change(0, "volume", "d", "i", 1.0, 0.6)
+        self.assertEqual(describe_change(ch), "100% → 60%")
+        self.assertEqual(describe_change(Change(0, "mute", "d", "i", False, True)),
+                         "microphone muted")
+        rows = score_candidates(sessions=[SessionInfo(3, "Discord.exe", 1)])
+        self.assertEqual(rows[0].reason, "holds the mic")
+
+    def test_russian_rendering(self):
+        i18n.set_language("ru")
+        self.assertEqual(confidence([]), "нет данных")
+        self.assertEqual(fmt_value("mute", True), "выключен")
+        rows = score_candidates(sessions=[SessionInfo(3, "Discord.exe", 1)])
+        self.assertEqual(rows[0].reason, "держит микрофон")
 
 
 class DetectChangesTest(unittest.TestCase):

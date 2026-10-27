@@ -46,17 +46,26 @@ VersionInfoProductName={#AppName}
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+english.AdditionalIcons=Additional shortcuts:
+russian.AdditionalIcons=Дополнительные ярлыки:
+english.AutostartTask=Start mic-monitor when Windows starts
+russian.AutostartTask=Запускать mic-monitor при входе в Windows
+english.AppComment=Mic volume, live level and who changed it
+russian.AppComment=Громкость микрофона и кто её менял
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "autostart"; Description: "Запускать mic-monitor при входе в Windows"; GroupDescription: "Дополнительно:"; Flags: unchecked
+Name: "autostart"; Description: "{cm:AutostartTask}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 Source: "..\dist\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "..\README.ru.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Comment: "Громкость микрофона и кто её менял"
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Comment: "{cm:AppComment}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 

@@ -1,42 +1,42 @@
 name: Bug report
-description: Что-то не работает или ведёт себя странно
+description: Something is broken or behaves unexpectedly
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Спасибо! Чем точнее данные — тем быстрее починим.
-        Если проблема в определении «виновника», сначала загляните в
-        `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` — там видно, что приложение видело в момент изменения.
+        Thanks! The more precise the details, the faster this gets fixed.
+        If the issue is about the "suspect" being wrong, check
+        `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` first — it shows what the app saw at that moment.
 
   - type: textarea
     id: what
     attributes:
-      label: Что случилось
-      description: Ожидаемое и фактическое поведение
+      label: What happened
+      description: Expected vs actual behaviour
       placeholder: |
-        Ожидал: изменение громкости показывает Discord.
-        Получил: виновник «не определён».
+        Expected: changing the volume in Discord shows Discord.exe.
+        Actual: the suspect is unknown.
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: Как повторить
+      label: Steps to reproduce
       placeholder: |
-        1. Открыть Discord
-        2. Зайти в настройки → Голос
-        3. Двинуть ползунок микрофона
+        1. Open Discord
+        2. Go to Settings -> Voice
+        3. Move the microphone slider
     validations:
       required: true
 
   - type: input
     id: version
     attributes:
-      label: Версия
-      description: Из `MicMonitor.exe --version`, свойств exe или окна истории
-      placeholder: "1.1.0"
+      label: Version
+      description: From `MicMonitor.exe --version`, the exe properties or the history window
+      placeholder: "1.3.0"
 
   - type: input
     id: windows
@@ -47,13 +47,19 @@ body:
   - type: input
     id: device
     attributes:
-      label: Устройство записи
-      description: Имя из оверлея или из `--probe`
-      placeholder: "Микрофон (USB PnP Audio Device)"
+      label: Recording device
+      description: Its name from the overlay or from `--probe`
+      placeholder: "Microphone (USB PnP Audio Device)"
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: UI language
+      options: [English, Русский]
 
   - type: textarea
     id: log
     attributes:
-      label: Фрагмент лога
-      description: Несколько строк из `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` вокруг проблемы
+      label: Log snippet
+      description: A few lines from `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` around the problem
       render: text

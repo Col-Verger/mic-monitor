@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    name: тесты
+    name: tests
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -23,16 +23,16 @@ jobs:
           cache: pip
           cache-dependency-path: requirements*.txt
 
-      - name: зависимости
+      - name: dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: юнит-тесты
+      - name: unit tests
         run: python -m unittest discover -s tests -v
 
   release:
-    name: exe + установщик
+    name: exe + installer
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
@@ -47,33 +47,33 @@ jobs:
           cache: pip
           cache-dependency-path: requirements*.txt
 
-      - name: зависимости сборки
+      - name: build dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: версия из тега
+      - name: version from tag
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
           "VERSION=$version" >> $env:GITHUB_ENV
-          Write-Host "версия: $version"
+          Write-Host "version: $version"
 
-      - name: версия в коде совпадает с тегом
+      - name: version matches the tag
         shell: pwsh
         run: |
           $app = (python -c "import mic_monitor; print(mic_monitor.__version__)").Trim()
           if ($app -ne $env:VERSION) {
-            throw "mic_monitor.__version__ = $app, а тег ${{ github.ref_name }}. Обновите __version__ перед тегом."
+            throw "mic_monitor.__version__ = $app but the tag is ${{ github.ref_name }}. Bump __version__ before tagging."
           }
 
-      - name: иконка и файл версии
+      - name: icon and version resource
         shell: pwsh
         run: |
           python tools/make_icon.py
           python tools/make_version_info.py $env:VERSION build/version_info.txt
 
-      - name: exe
+      - name: portable exe
         run: >
           python -m PyInstaller --noconfirm --clean --onefile --noconsole
           --name MicMonitor --icon mic.ico
@@ -82,21 +82,21 @@ jobs:
       - name: Inno Setup
         run: choco install innosetup --no-progress -y
 
-      - name: установщик
+      - name: installer
         shell: pwsh
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:VERSION" "installer\mic-monitor.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed: $LASTEXITCODE" }
 
-      - name: проверка артефактов
+      - name: verify artifacts
         shell: pwsh
         run: |
-          if (-not (Test-Path "dist\MicMonitor.exe")) { throw "нет dist\MicMonitor.exe" }
+          if (-not (Test-Path "dist\MicMonitor.exe")) { throw "missing dist\MicMonitor.exe" }
           $setup = Get-ChildItem "dist\MicMonitor-Setup-*.exe"
-          if (-not $setup) { throw "нет установщика" }
-          $setup | ForEach-Object { "{0} — {1:N1} МБ" -f $_.Name, ($_.Length / 1MB) }
+          if (-not $setup) { throw "missing installer" }
+          $setup | ForEach-Object { "{0} — {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
 
-      - name: релиз
+      - name: release
         uses: softprops/action-gh-release@v3
         with:
           files: |

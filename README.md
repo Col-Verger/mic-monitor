@@ -5,73 +5,78 @@
 [![license](https://img.shields.io/github/license/Col-Verger/mic-monitor)](LICENSE)
 [![windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)](https://github.com/Col-Verger/mic-monitor/releases/latest)
 
-**Скачать:** [установщик](https://github.com/Col-Verger/mic-monitor/releases/latest) ·
-[портативный exe](https://github.com/Col-Verger/mic-monitor/releases/latest)
+**English** · [Русский](README.ru.md)
 
-Маленький оверлей для Windows: показывает **текущую громкость микрофона**, живой **уровень сигнала**
-и **историю того, кто эту громкость менял** — с именем процесса, путём к exe и звуковым сигналом
-на каждое изменение.
+**Download:** [installer](https://github.com/Col-Verger/mic-monitor/releases/latest) ·
+[portable exe](https://github.com/Col-Verger/mic-monitor/releases/latest)
 
-Повесил поверх окон в углу — и видно, когда Discord / панель Realtek / игра «дёрнули» микрофон,
-на сколько именно и кто был рядом в этот момент.
+A tiny always-on-top overlay for Windows that shows the **current microphone level**, the **live input
+signal**, and a **history of who changed the volume** — with the process name, its exe path, and a sound
+alert on every change.
 
-![Оверлей](docs/screenshot-overlay.png)
+Pin it in a corner and you can see when Discord, a game, or a vendor panel (Realtek, Nahimic,
+SteelSeries Sonar, Voicemeeter) touched your mic, by how much, and what was running at that moment.
 
-![История](docs/screenshot-history.png)
+![Overlay](docs/screenshot-overlay.png)
 
-## Какую проблему это решает
+![History](docs/screenshot-history.png)
 
-Windows показывает громкость микрофона, только если сам залезть в «Параметры → Звук → Вход».
-Сама система **не ведёт истории** и не сообщает, какая программа изменила уровень. Отсюда типичные
-ситуации:
+## The problem it solves
 
-- **«Меня перестали слышать»** — микрофон стал тише, а когда и из-за чего, непонятно.
-  Discord, Teams, Steam, игра, панель Realtek или SteelSeries Sonar могли убавить его в фоне.
-- **«Наушники переподключились»** — Windows вернула ползунок на 100%, в наушниках эхо и перегруз,
-  зато никто не знает, что вообще что-то поменялось.
-- **«Настройки дерутся»** — две программы одновременно считают себя хозяином микрофона и по кругу
-  переставляют уровень: 100% → 40% → 100%.
-- **«Хочу видеть, а не гадать»** — нужно поднять микрофон для всех приложений сразу, а не бегать
-  по настройкам каждого.
-- **«Не могу доказать»** — в поддержке или в чате просят факты: когда, на сколько и кто менял.
+Windows shows your microphone level only if you dig into *Settings → Sound → Input*. The system keeps
+**no history** and never tells you **which program** changed the level. Hence the usual situations:
 
-mic-monitor решает именно это: держит уровень на виду, пишет каждое изменение с временем и
-подозреваемым процессом, и подаёт звук, чтобы изменение не проскочило мимо.
+- **"Nobody can hear me anymore"** — the mic got quieter, and you have no idea when or why.
+  Discord, Teams, Steam, a game, Realtek or SteelSeries Sonar could have lowered it in the background.
+- **"I plugged my headset back in"** — Windows reset the slider to 100%, your voice is clipping,
+  and nothing tells you the level changed at all.
+- **"Settings are fighting each other"** — two programs both think they own the mic and keep
+  resetting it: 100% → 40% → 100%.
+- **"I want to see it, not guess"** — you need the level raised for every app at once, not to walk
+  through each app's settings.
+- **"I can't prove it"** — support asks for facts: when, by how much, and which program.
 
-| Проблема | Что делает приложение |
+mic-monitor does exactly this: keeps the level in sight, writes every change with a timestamp and the
+suspected process, and beeps so a change never slips by unnoticed.
+
+| Problem | What the app does |
 |---|---|
-| непонятно, кто убавил микрофон | лог с процессом, путём к exe, родителем и уверенностью |
-| не видно текущего уровня | оверлей поверх всех окон: проценты, полоса, уровень сигнала |
-| изменение проскочило незамеченным | звуковой сигнал на каждое изменение (и отдельный на mute) |
-| нужно понять закономерность | история изменений и сводка по программам: кто сколько раз и какие значения ставил |
-| нужно отдать факты наружу | экспорт CSV и текстовый лог |
+| you don't know what lowered the mic | log entry with process, exe path, parent process and confidence |
+| you can't see the current level | always-on-top overlay: percent, bar, live signal |
+| the change slipped by | sound alert on every change (a different one for mute) |
+| you need the pattern | change history and a per-program summary: how many times, which values |
+| you need to hand over facts | CSV export and a plain-text log |
 
-## Что умеет
+## Features
 
-- **Оверлей поверх всех окон**: устройство записи, громкость в процентах, полоса громкости,
-  тонкая полоса уровня сигнала, последнее изменение и подозреваемый процесс.
-- **Компактный вид** — только устройство, проценты и полоса.
-- **История изменений**: время, было → стало, устройство, подозреваемый и уверенность;
-  вторая вкладка — сводка по программам (сколько раз совпала с изменением, какие значения ставила).
-- **Текстовый лог** с уликами: `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` — подозреваемый,
-  путь к exe, родительский процесс, активное окно, кто держит микрофон, свежие процессы.
-- **Звук на изменение** (системный, без внешних файлов). Отключается в меню.
-- **Экспорт CSV** и выбор устройства записи из меню.
-- **Автозапуск** с Windows — галочка в меню (то же самое можно включить галочкой в установщике).
-- Перетаскивание мышью, прозрачность/поверх окон, запоминание позиции, одна копия приложения.
+- **Always-on-top overlay**: recording device, volume in percent, volume bar, thin live signal bar,
+  the last change and the suspected process.
+- **Compact mode** — device, percent and bar only.
+- **Change history**: time, before → after, device, suspect and confidence; a second tab is a
+  per-program summary (how many matches, which values it set).
+- **Plain-text log** with evidence: `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` — suspect, exe path,
+  parent process, active window, who holds the mic, recently started processes.
+- **Sound alert on change** (built-in Windows sounds, no extra files), toggleable in the menu.
+- **CSV export** and recording-device picker in the menu.
+- **Start with Windows** — menu toggle (also a checkbox in the installer).
+- Drag to move, always-on-top/opacity, remembered position, single instance.
+- **English and Russian UI**, detected from the system language and switchable at runtime
+  (menu → Language, or `--lang en`).
 
-## Как установить
+## Install
 
-**Установщик (рекомендуется):** скачать `MicMonitor-Setup-<версия>.exe` из [Releases](../../releases/latest) и запустить.
+**Installer (recommended):** download `MicMonitor-Setup-<version>.exe` from
+[Releases](https://github.com/Col-Verger/mic-monitor/releases/latest) and run it.
 
-- права администратора не нужны, ставится в `%LOCALAPPDATA%\Programs\mic-monitor`;
-- ярлык в «Пуск» и (по желанию) на рабочем столе;
-- появляется в «Параметры → Приложения» → удаляется оттуда же;
-- можно сразу поставить галочку «Запускать при входе в Windows».
+- no administrator rights, installs into `%LOCALAPPDATA%\Programs\mic-monitor`;
+- Start Menu shortcut and (optionally) a desktop shortcut;
+- shows up in *Settings → Apps*, uninstalls from there;
+- optional "start with Windows" checkbox;
+- if the app is running, the installer and uninstaller close it automatically.
 
-**Портативная версия:** `MicMonitor.exe` из [Releases](../../releases/latest) — просто запустить, ничего не устанавливается.
+**Portable:** `MicMonitor.exe` from the same release — just run it, nothing is installed.
 
-**Из исходников:**
+**From source:**
 
 ```powershell
 python -m venv .venv
@@ -79,110 +84,92 @@ python -m venv .venv
 .\.venv\Scripts\python.exe mic_monitor.py
 ```
 
-Или `.\run.ps1` — сам создаст venv и доставит зависимости.
+Or `.\run.ps1`, which creates the venv and installs dependencies for you.
 
-Полезные режимы:
+Useful modes:
 
 ```powershell
-python mic_monitor.py --probe        # список устройств записи, громкость, сессии
-python mic_monitor.py --watch 60     # лог изменений в консоль без окна, 60 секунд
+python mic_monitor.py --probe        # recording devices, volume, audio sessions
+python mic_monitor.py --watch 60     # log changes to the console for 60 seconds, no window
+python mic_monitor.py --lang en      # force the UI language (en / ru)
 ```
 
-## Управление
+## Controls
 
-- **перетащить** — двигать окно, позиция запоминается;
-- **двойной клик** по оверлею — окно истории;
-- **правый клик** — меню: история, компактный вид, поверх окон, звук, открыть лог, выбор устройства, выход;
-- **✕** — выход.
+- **drag** — move the overlay, the position is remembered;
+- **double click** — history window;
+- **right click** — menu: history, compact view, always on top, sound, start with Windows, open log,
+  device picker, language, quit;
+- **✕** — quit.
 
-## Где данные
+## Where the data lives
 
 `%LOCALAPPDATA%\MicMonitor\`
 
-| файл | что внутри |
+| file | contents |
 |---|---|
-| `mic-monitor.log` | текстовый лог изменений с уликами (ротация на 1 МБ) |
-| `history.jsonl` | те же события в JSON, последние 500 |
-| `config.json` | позиция окна, прозрачность, звук, выбранное устройство |
-| `mic-history-*.csv` | экспорт из окна истории |
+| `mic-monitor.log` | plain-text change log with evidence (rotates at 1 MB) |
+| `history.jsonl` | the same events as JSON, last 500 |
+| `config.json` | window position, opacity, sound, language, chosen device |
+| `mic-history-*.csv` | exports from the history window |
 
-## Честно о главном ограничении
+## The honest limitation
 
-Windows **не сообщает**, какой процесс изменил громкость устройства записи: в Core Audio такого
-события нет, есть только новый уровень. Поэтому «виновник» — это **эвристика**, а не факт.
+Windows **does not tell you** which process changed the recording volume: Core Audio has no such event,
+only the new level. So the "suspect" is a **heuristic**, not a fact.
 
-Что реально измеряется: громкость/mute устройства (тот же ползунок, что «Уровень» в настройках),
-пик сигнала и список программ, у которых в этот момент открыт микрофон (это настоящие аудио-сессии,
-их видно через WASAPI).
+What is actually measured: device volume/mute (the same slider as *Level* in Windows settings), the
+signal peak, and the programs that have the mic open at that moment (real WASAPI audio sessions).
 
-Кандидаты набирают вес по признакам:
+Candidates gain weight from these signals:
 
-| признак | вес |
+| signal | weight |
 |---|---|
-| только что открыл микрофон (≤ 4 с) | 3.2 |
-| активное окно в момент изменения | 3.0 |
-| запущен только что (≤ 8 с) | 2.2 |
-| держит микрофон | 2.0 |
-| известная панель управления звуком (Realtek, Sonar, SteelSeries, Voicemeeter…) | +1.2 |
+| just opened the mic (≤ 4 s) | 3.2 |
+| active window at the moment of change | 3.0 |
+| started just now (≤ 8 s) | 2.2 |
+| holds the mic | 2.0 |
+| known audio control panel (Realtek, Sonar, SteelSeries, Voicemeeter…) | +1.2 |
 
-В логе и в окне истории честно пишется уверенность: `высокая` / `средняя` / `низкая`.
-Если два процесса одинаково правдоподобны — уверенность будет низкой, и это правильно.
+Both the log and the history window state the confidence: `high` / `medium` / `low`. If two processes
+are equally plausible, the confidence is low — and that is the honest answer.
 
-Чего приложение **не** делает: не меняет «Микрофонный усилитель (+дБ)» (это уровень драйвера,
-доступный только панели производителя) и не трогает внутреннюю громкость приложения
-(Discord/OBS/Teams регулируют свой вход сами).
+What the app **does not** do: it does not change the driver-level "Microphone Boost (+dB)" (only the
+vendor panel can) and it does not touch per-app input gain (Discord/OBS/Teams manage that themselves).
 
-## Сборка exe
+## Build
 
 ```powershell
-.\build.ps1            # dist\MicMonitor.exe (портативный)
-.\build-installer.ps1  # dist\MicMonitor-Setup-<версия>.exe (установщик, Inno Setup)
+.\build.ps1            # dist\MicMonitor.exe (portable)
+.\build-installer.ps1  # dist\MicMonitor-Setup-<version>.exe (Inno Setup)
 ```
 
-`build.ps1` создаёт/обновляет venv, ставит зависимости, генерирует иконку (`tools/make_icon.py`),
-собирает `dist\MicMonitor.exe` (один файл, без консоли, с иконкой и версией) и копирует его на рабочий стол.
-`build-installer.ps1` дополнительно собирает установщик по скрипту `installer\mic-monitor.iss`
-(нужен [Inno Setup 6](https://jrsoftware.org/isinfo.php): `winget install --id JRSoftware.InnoSetup -e`).
+`build.ps1` creates/updates the venv, installs dependencies, generates the icon
+(`tools/make_icon.py`) and the PyInstaller version resource, builds the single-file windowless exe and
+copies it to the desktop. `build-installer.ps1` then builds the installer from
+`installer\mic-monitor.iss` (requires [Inno Setup 6](https://jrsoftware.org/isinfo.php):
+`winget install --id JRSoftware.InnoSetup -e`).
 
-Версия берётся из `mic_monitor.__version__`; проверка и сборка релиза идут автоматически:
-`.github/workflows/build.yml` прогоняет тесты на каждый push и PR, а на тег `v*` собирает exe и
-установщик и прикрепляет их к релизу (`git tag v1.2.0 && git push origin v1.2.0`).
+The version comes from `mic_monitor.__version__`. CI runs the tests on every push and PR, and on a `v*`
+tag builds the exe and the installer and attaches them to the release
+(`git tag v1.3.0 && git push origin v1.3.0`).
 
-## Тесты
+## Tests
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Покрыта чистая логика: определение изменений, взвешивание кандидатов и уверенность, форматирование,
-история, текстовый лог, выбор системного звука.
+Covers the pure logic — change detection, candidate weighting and confidence, formatting, history,
+text log, system sound choice — plus translation key parity, placeholder parity and both languages
+rendering.
 
-## Требования
+## Requirements
 
-- Windows 10 / 11 (Core Audio, WASAPI, tkinter — всё в комплекте с Python);
-- Python 3.10+ для запуска из исходников; готовый exe зависимостей не требует;
-- exe не подписан: Windows SmartScreen может спросить «всё равно запустить».
+- Windows 10 / 11 (Core Audio, WASAPI and tkinter ship with Python);
+- Python 3.10+ when running from source; the released exe has no dependencies;
+- the exe is not code-signed, so SmartScreen may ask for confirmation.
 
-## English
+## License
 
-`mic-monitor` is a small always-on-top Windows overlay that shows the current **microphone level**
-(recording endpoint volume), the **live input peak**, and a **history of who changed the volume** —
-with the suspected process name, executable path, and a sound alert on every change.
-
-Windows gives you no history and no "who did it" event: the level just silently changes when Discord,
-a game, or a vendor panel (Realtek, Nahimic, SteelSeries Sonar, Voicemeeter) touches it. mic-monitor
-keeps the level visible, logs every change with time and evidence, and beeps so you notice.
-
-Install with `MicMonitor-Setup-1.1.0.exe` (no admin rights, per-user install, uninstall from Windows
-Settings) or run the portable `MicMonitor.exe`. Optional "start with Windows" toggle in both the
-installer and the app menu.
-
-Attribution is a documented heuristic (foreground window, processes holding the mic, freshly started
-processes, known audio control panels) with an explicit confidence label. Everything is logged to
-`%LOCALAPPDATA%\MicMonitor\mic-monitor.log`.
-
-Requires Windows 10/11. Source build: Python 3.10+. MIT licensed.
-
-## Лицензия
-
-MIT — см. [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

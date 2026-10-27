@@ -30,8 +30,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from i18n import (available_languages, current_language, detect_language,
+                  set_language, t, variants)
+
 APP_NAME = "MicMonitor"
-__version__ = "1.2.1"
+__version__ = "1.3.0"
 APP_DIR = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / APP_NAME
 HISTORY_FILE = APP_DIR / "history.jsonl"
 CONFIG_FILE = APP_DIR / "config.json"
@@ -195,23 +198,23 @@ def score_candidates(
 
     for s in sessions:
         if s.pid in set(new_session_pids):
-            push(ProcInfo(s.pid, s.name), 3.2, "только что открыл микрофон")
+            push(ProcInfo(s.pid, s.name), 3.2, t("cand.just_opened_mic"))
         elif s.active:
-            push(ProcInfo(s.pid, s.name), 2.0, "держит микрофон")
+            push(ProcInfo(s.pid, s.name), 2.0, t("cand.holds_mic"))
         else:
-            push(ProcInfo(s.pid, s.name), 0.6, "микрофон открыт в фоне")
+            push(ProcInfo(s.pid, s.name), 0.6, t("cand.mic_idle"))
 
     for p in recent:
-        push(p, 2.2, "запущен только что")
+        push(p, 2.2, t("cand.just_started"))
 
     if foreground is not None:
-        push(foreground, 3.0, "активное окно")
+        push(foreground, 3.0, t("cand.foreground"))
 
     for info in list(scored.values()):
         low = info.name.lower()
         if any(key in low for key in KNOWN_CONTROL_APPS):
             info.score += 1.2
-            info.reason += "; панель управления звуком"
+            info.reason += t("cand.control_panel_suffix")
 
     rows = sorted(scored.values(), key=lambda c: (-c.score, c.name.lower()))[:4]
     for row in rows:
@@ -250,14 +253,14 @@ def confidence(candidates: Iterable[Candidate]) -> str:
     """Насколько уверенно можно назвать виновника (эвристика, не факт)."""
     rows = sorted(candidates, key=lambda c: -c.score)
     if not rows:
-        return "нет данных"
+        return t("conf.none")
     top = rows[0].score
     gap = top - (rows[1].score if len(rows) > 1 else 0.0)
     if top >= 3.0 and gap >= 0.8:
-        return "высокая"
+        return t("conf.high")
     if top >= 2.5 or (top >= 2.0 and gap >= 0.3):
-        return "средняя"
-    return "низкая"
+        return t("conf.medium")
+    return t("conf.low")
 
 
 def fmt_volume(value: float | None) -> str:
@@ -271,14 +274,14 @@ def fmt_value(kind: str, value: Any) -> str:
     if value is None:
         return ""
     if kind == "mute":
-        return "выключен" if value else "включён"
+        return t("value.muted_yes") if value else t("value.muted_no")
     if isinstance(value, float):
         return fmt_volume(value)
     return str(value)
 
 
 def short_device(name: str, limit: int = 34) -> str:
-    name = " ".join((name or "Устройство записи").split())
+    name = " ".join((name or t("ui.device_placeholder")).split())
     return name if len(name) <= limit else name[: limit - 1] + "…"
 
 
@@ -287,13 +290,13 @@ def describe_change(change: Change) -> str:
     if change.kind == "volume":
         return f"{fmt_volume(change.old)} → {fmt_volume(change.new)}"
     if change.kind == "mute":
-        return "микрофон выключен" if change.new else "микрофон включён"
+        return t("change.muted_on") if change.new else t("change.muted_off")
     if change.kind == "device":
-        return f"другое устройство: {short_device(str(change.new), 22)}"
+        return t("change.device", name=short_device(str(change.new), 22))
     if change.kind == "session_start":
-        return f"{change.new} открыл микрофон"
+        return t("change.session_start", name=change.new)
     if change.kind == "session_stop":
-        return f"{change.old} отпустил микрофон"
+        return t("change.session_stop", name=change.old)
     return change.kind
 
 
@@ -350,7 +353,7 @@ class DeviceHandle:
 
         self.device = device
         self.id: str = device.id
-        self.name: str = device.FriendlyName or "Устройство записи"
+        self.name: str = device.FriendlyName or t("ui.device_placeholder")
         self._meter = meter
         self._session_ctl = IAudioSessionControl2
 
@@ -415,7 +418,7 @@ class AudioBackend:
                 data_flow=self._Flow.eCapture.value,
                 device_state=self._State.Active.value,
             ):
-                out.append((dev.id, dev.FriendlyName or "Устройство записи"))
+                out.append((dev.id, dev.FriendlyName or t("ui.device_placeholder")))
         except Exception:
             pass
         return out
@@ -526,7 +529,8 @@ class History:
         out = self.path.parent / f"mic-history-{datetime.now():%Y%m%d-%H%M%S}.csv"
         with out.open("w", encoding="utf-8-sig", newline="") as fh:
             writer = csv.writer(fh, delimiter=";")
-            writer.writerow(["время", "тип", "устройство", "было", "стало", "программы"])
+            writer.writerow([t("csv.time"), t("csv.kind"), t("csv.device"),
+                             t("csv.old"), t("csv.new"), t("csv.programs")])
             for rec in self.records:
                 names = ", ".join(c.get("name", "?") for c in rec.get("candidates", []))
                 old, new = rec.get("old"), rec.get("new")
@@ -545,12 +549,14 @@ class History:
 # Текстовый лог «кто это сделал»
 # ----------------------------------------------------------------------------
 
+HISTORY_KINDS = ("volume", "mute", "device", "session_start", "session_stop")
+
 KIND_TITLES = {
-    "volume": "ГРОМКОСТЬ",
-    "mute": "MUTE",
-    "device": "УСТРОЙСТВО",
-    "session_start": "ОТКРЫЛ МИКРОФОН",
-    "session_stop": "ЗАКРЫЛ МИКРОФОН",
+    "volume": "kind.volume",
+    "mute": "kind.mute",
+    "device": "kind.device",
+    "session_start": "kind.session_start",
+    "session_stop": "kind.session_stop",
 }
 
 
@@ -578,15 +584,13 @@ class Logger:
 
     # ------------------------------------------------------------------
     def startup(self, device: str, source: str) -> None:
-        self.write(f"=== запуск ({source}) · устройство: {device}")
+        self.write(t("log.startup", source=source, device=device))
 
     def change(self, record: dict[str, Any], echo: bool = False) -> str:
         kind = record.get("kind", "")
-        title = KIND_TITLES.get(kind, kind.upper())
+        title = t(KIND_TITLES[kind]) if kind in KIND_TITLES else kind.upper()
         old, new = fmt_value(kind, record.get("old")), fmt_value(kind, record.get("new"))
-        if kind in ("volume", "mute"):
-            what = f"{old} → {new}"
-        elif kind == "device":
+        if kind in ("volume", "mute", "device"):
             what = f"{old} → {new}"
         else:
             what = new or old
@@ -595,36 +599,37 @@ class Logger:
 
         suspect = record.get("suspect")
         if suspect:
-            lines.append(f"    виновник: {suspect['name']} (pid {suspect['pid']}) — "
-                         f"уверенность {suspect['confidence']}")
-            lines.append(f"      причина: {suspect['reason']}")
+            lines.append(t("log.suspect", name=suspect["name"], pid=suspect["pid"],
+                           confidence=suspect["confidence"]))
+            lines.append(t("log.reason", reason=suspect["reason"]))
             for cand in record.get("candidates", []):
                 if cand.get("pid") == suspect["pid"]:
                     if cand.get("exe"):
-                        lines.append(f"      файл: {cand['exe']}")
+                        lines.append(t("log.file", exe=cand["exe"]))
                     if cand.get("parent"):
-                        lines.append(f"      родитель: {cand['parent']}")
+                        lines.append(t("log.parent", parent=cand["parent"]))
                     break
             others = [c["name"] for c in record.get("candidates", [])
                       if c.get("pid") != suspect["pid"]]
             if others:
-                lines.append(f"    ещё под подозрением: {', '.join(others)}")
+                lines.append(t("log.others", names=", ".join(others)))
         elif kind in ("volume", "mute", "device"):
-            lines.append("    виновник: не определён")
+            lines.append(t("log.no_suspect"))
 
         ctx = record.get("context") or {}
         fg = ctx.get("foreground")
         if fg:
             title_txt = f" «{fg.get('title')}»" if fg.get("title") else ""
-            lines.append(f"    активное окно: {fg.get('name')} (pid {fg.get('pid')}){title_txt}")
+            lines.append(t("log.foreground", name=fg.get("name"), pid=fg.get("pid"),
+                           title=title_txt))
         sessions = ctx.get("sessions") or []
         if sessions:
-            lines.append("    держат микрофон: " + ", ".join(
-                f"{s['name']}({s['pid']})" for s in sessions[:6]))
+            lines.append(t("log.holding", names=", ".join(
+                f"{s['name']}({s['pid']})" for s in sessions[:6])))
         recent = ctx.get("recent") or []
         if recent:
-            lines.append("    свежие процессы: " + ", ".join(
-                f"{p['name']}({p['pid']})" for p in recent[:6]))
+            lines.append(t("log.recent", names=", ".join(
+                f"{p['name']}({p['pid']})" for p in recent[:6])))
 
         text = f"{record.get('time', '')}  " + "\n".join(lines)
         self.write(text)
@@ -730,7 +735,7 @@ class Watcher(threading.Thread):
         try:
             backend = AudioBackend()
         except Exception as exc:
-            self.out.put({"type": "error", "text": f"Core Audio недоступен: {exc}"})
+            self.out.put({"type": "error", "text": t("watch.audio_unavailable", error=exc)})
             return
 
         try:
@@ -738,7 +743,7 @@ class Watcher(threading.Thread):
                 try:
                     self._tick(backend)
                 except Exception as exc:  # устройство выдернули, COM упал и т.п.
-                    self.out.put({"type": "warning", "text": f"сбой опроса: {exc}"})
+                    self.out.put({"type": "warning", "text": t("watch.poll_failed", error=exc)})
                     self._handle = None
                     time.sleep(0.5)
                 time.sleep(POLL_INTERVAL)
@@ -759,11 +764,11 @@ class Watcher(threading.Thread):
             if self._handle is None or self._handle.id != wanted:
                 handle = backend.open(wanted)
                 if handle is None:
-                    self.out.put({"type": "warning", "text": "нет доступных устройств записи"})
+                    self.out.put({"type": "warning", "text": t("watch.no_devices")})
                     return
                 self._handle = handle
                 self._prev = None
-                self.logger.startup(handle.name, "наблюдатель")
+                self.logger.startup(handle.name, t("log.source_watcher"))
             self._last_slow = now
 
         handle = self._handle
@@ -875,11 +880,14 @@ class Overlay:
         self.compact = bool(self.cfg.get("compact", False))
         self._drag = (0, 0)
         self._peak_disp = 0.0
+        self._has_change = False
+        self._language_names = {"en": "English", "ru": "Русский"}
         self._history_win: HistoryWindow | None = None
 
         root = tk.Tk()
         self.root = root
-        root.title("mic-monitor")
+        self._lang_var = tk.StringVar(master=root, value=current_language())
+        root.title(t("ui.window_title"))
         root.configure(bg=BG)
         root.overrideredirect(True)
         root.attributes("-topmost", bool(self.cfg.get("topmost", True)))
@@ -904,7 +912,7 @@ class Overlay:
         # верхняя полоса: имя устройства + кнопки
         top = tk.Frame(outer, bg=BG)
         top.pack(fill="x", padx=8, pady=(6, 0))
-        self.device_lbl = tk.Label(top, text="устройство записи", bg=BG, fg=DIM,
+        self.device_lbl = tk.Label(top, text=t("ui.device_placeholder"), bg=BG, fg=DIM,
                                    font=FONT_SMALL, anchor="w")
         self.device_lbl.pack(side="left", fill="x", expand=True)
 
@@ -928,7 +936,7 @@ class Overlay:
         # сигнал
         self.sig_frame = tk.Frame(outer, bg=BG)
         self.sig_frame.pack(fill="x", padx=8, pady=(6, 0))
-        self.sig_lbl = tk.Label(self.sig_frame, text="сигнал", bg=BG, fg=DIM, font=FONT_SMALL,
+        self.sig_lbl = tk.Label(self.sig_frame, text=t("ui.signal"), bg=BG, fg=DIM, font=FONT_SMALL,
                                 anchor="w")
         self.sig_lbl.pack(side="left")
         self.sig_val = tk.Label(self.sig_frame, text="0%", bg=BG, fg=DIM, font=FONT_SMALL)
@@ -941,7 +949,7 @@ class Overlay:
         # последнее изменение
         self.last_frame = tk.Frame(outer, bg=BG)
         self.last_frame.pack(fill="x", padx=8, pady=(6, 0))
-        self.last_lbl = tk.Label(self.last_frame, text="изменений пока не было", bg=BG,
+        self.last_lbl = tk.Label(self.last_frame, text=t("ui.no_changes"), bg=BG,
                                  fg=DIM, font=FONT_SMALL, anchor="w", justify="left")
         self.last_lbl.pack(fill="x")
 
@@ -1012,18 +1020,18 @@ class Overlay:
         tk = self.tk
         menu = tk.Menu(self.root, tearoff=0, bg="#1b202b", fg=FG,
                        activebackground="#2a3242", activeforeground=FG, bd=0)
-        menu.add_command(label="История изменений", command=self.toggle_history)
-        menu.add_command(label="Компактный вид" if not self.compact else "Полный вид",
+        menu.add_command(label=t("menu.history"), command=self.toggle_history)
+        menu.add_command(label=t("menu.compact") if not self.compact else t("menu.full"),
                          command=self.toggle_compact)
-        menu.add_checkbutton(label="Поверх всех окон", command=self.toggle_topmost,
+        menu.add_checkbutton(label=t("menu.topmost"), command=self.toggle_topmost,
                              variable=tk.BooleanVar(value=bool(self.root.attributes("-topmost"))))
-        menu.add_checkbutton(label="Звук при изменении", command=self.toggle_sound,
+        menu.add_checkbutton(label=t("menu.sound"), command=self.toggle_sound,
                              variable=tk.BooleanVar(value=bool(self.cfg.get("sound", True))))
-        menu.add_checkbutton(label="Запускать с Windows", command=self.toggle_autostart,
+        menu.add_checkbutton(label=t("menu.autostart"), command=self.toggle_autostart,
                              variable=tk.BooleanVar(value=autostart_enabled()))
         menu.add_separator()
-        menu.add_command(label="Открыть лог", command=self._open_log)
-        menu.add_command(label="Открыть историю (папка)", command=self._open_folder)
+        menu.add_command(label=t("menu.open_log"), command=self._open_log)
+        menu.add_command(label=t("menu.open_folder"), command=self._open_folder)
         if self.app.current:
             menu.add_separator()
             for dev_id, dev_name in self.app.devices:
@@ -1031,9 +1039,17 @@ class Overlay:
                 menu.add_command(label=mark + short_device(dev_name, 40),
                                  command=lambda d=dev_id: self.app.select_device(d))
         menu.add_separator()
-        menu.add_command(label="Сбросить на устройство по умолчанию",
+        menu.add_command(label=t("menu.default_device"),
                          command=lambda: self.app.select_device(None))
-        menu.add_command(label="Выход", command=self.close)
+        lang_menu = tk.Menu(menu, tearoff=0, bg="#1b202b", fg=FG,
+                            activebackground="#2a3242", activeforeground=FG, bd=0)
+        for code in available_languages():
+            lang_menu.add_radiobutton(
+                label=self._language_names.get(code, code), value=code,
+                variable=self._lang_var, command=lambda c=code: self.switch_language(c),
+            )
+        menu.add_cascade(label=t("menu.language"), menu=lang_menu)
+        menu.add_command(label=t("menu.quit"), command=self.close)
         try:
             menu.tk_popup(event.x_root if event else self.root.winfo_pointerx(),
                           event.y_root if event else self.root.winfo_pointery())
@@ -1052,6 +1068,28 @@ class Overlay:
 
     def toggle_autostart(self) -> None:
         self.cfg["autostart"] = set_autostart(not autostart_enabled())
+
+    def switch_language(self, code: str) -> None:
+        """Сменить язык интерфейса на лету и запомнить выбор."""
+        set_language(code)
+        self.cfg["language"] = current_language()
+        self._lang_var.set(current_language())
+        self.retranslate()
+        if self._history_win is not None and self._history_win.alive():
+            self._history_win.retranslate()
+        self.app.save_config()
+
+    def retranslate(self) -> None:
+        """Обновить тексты после смены языка (данные подтянутся следующим событием)."""
+        self.root.title(t("ui.window_title"))
+        if not self.app.current:
+            self.device_lbl.configure(text=t("ui.device_placeholder"))
+        self.sig_lbl.configure(text=t("ui.signal"))
+        if not self._has_change:
+            self.last_lbl.configure(text=t("ui.no_changes"))
+        self.who_lbl.configure(text="")
+        if self.app.current:
+            self._render_state(self.app.current)
 
     def _open_log(self) -> None:
         try:
@@ -1101,7 +1139,7 @@ class Overlay:
         self.device_lbl.configure(text=short_device(st["device"], 40), fg=DIM)
         self.vol_lbl.configure(text=fmt_volume(st["volume"]),
                                fg=BAD if st["muted"] else FG)
-        self.state_lbl.configure(text="ВЫКЛ" if st["muted"] else "", fg=BAD)
+        self.state_lbl.configure(text=t("ui.muted_badge") if st["muted"] else "", fg=BAD)
 
         self._peak_disp = max(st["peak"], self._peak_disp * 0.80)
         self.sig_val.configure(text=fmt_volume(self._peak_disp))
@@ -1109,10 +1147,11 @@ class Overlay:
 
         active = sorted({name for _pid, name, is_active in st.get("sessions", ()) if is_active})
         if active:
-            extra = f" +{len(active) - 2}" if len(active) > 2 else ""
-            self.sig_lbl.configure(text=short_device("сигнал · " + ", ".join(active[:2]) + extra, 46))
+            extra = t("ui.signal_more", count=len(active) - 2) if len(active) > 2 else ""
+            self.sig_lbl.configure(
+                text=short_device(t("ui.signal_listen", names=", ".join(active[:2]) + extra), 46))
         else:
-            self.sig_lbl.configure(text="сигнал · микрофон свободен")
+            self.sig_lbl.configure(text=t("ui.signal_free"))
 
     def _redraw_bars(self) -> None:
         st = self.app.current
@@ -1132,17 +1171,24 @@ class Overlay:
                                          ("ts", "kind", "device", "device_id", "old", "new")},
                                      candidates=[]))
         self.last_lbl.configure(text=f"{when}  {text}", fg=FG)
+        self._has_change = True
 
         suspect = change.get("suspect")
         if suspect:
             conf = suspect.get("confidence", "")
-            color = OK if conf == "высокая" else (ACCENT if conf == "средняя" else DIM)
+            if conf in variants("conf.high"):
+                color = OK
+            elif conf in variants("conf.medium"):
+                color = ACCENT
+            else:
+                color = DIM
             self.who_lbl.configure(
-                text=short_device(f"{suspect['name']} · {suspect['reason']} ({conf})", 52),
+                text=short_device(t("ui.suspect", name=suspect["name"],
+                                    reason=suspect["reason"], confidence=conf), 52),
                 fg=color,
             )
         else:
-            self.who_lbl.configure(text="виновник не определён", fg=DIM)
+            self.who_lbl.configure(text=t("ui.no_suspect"), fg=DIM)
 
     # ------------------------------------------------------------------
     def toggle_history(self) -> None:
@@ -1169,7 +1215,7 @@ class HistoryWindow:
         self.overlay = overlay
         self.app = overlay.app
         self.win = tk.Toplevel(overlay.root)
-        self.win.title("mic-monitor — история")
+        self.win.title(t("hist.title"))
         self.win.configure(bg=BG)
         self.win.geometry("760x420")
         self.win.attributes("-topmost", bool(overlay.cfg.get("topmost", True)))
@@ -1195,16 +1241,17 @@ class HistoryWindow:
 
         changes_tab = tk.Frame(nb, bg="#161a22")
         programs_tab = tk.Frame(nb, bg="#161a22")
-        nb.add(changes_tab, text="Изменения")
-        nb.add(programs_tab, text="Программы")
+        nb.add(changes_tab, text=t("hist.tab_changes"))
+        nb.add(programs_tab, text=t("hist.tab_programs"))
 
         self.tree = ttk.Treeview(
             changes_tab, columns=("time", "kind", "was", "now", "who"),
             show="headings", selectmode="browse",
         )
         for col, title, width in (
-            ("time", "Время", 130), ("kind", "Событие", 90),
-            ("was", "Было", 70), ("now", "Стало", 70), ("who", "Кандидаты", 340),
+            ("time", t("hist.col_time"), 130), ("kind", t("hist.col_kind"), 90),
+            ("was", t("hist.col_old"), 70), ("now", t("hist.col_new"), 70),
+            ("who", t("hist.col_who"), 340),
         ):
             self.tree.heading(col, text=title)
             self.tree.column(col, width=width, anchor="w", stretch=(col == "who"))
@@ -1218,8 +1265,8 @@ class HistoryWindow:
             show="headings", selectmode="browse",
         )
         for col, title, width in (
-            ("name", "Программа", 200), ("count", "Совпадений", 90),
-            ("last", "Последний раз", 130), ("values", "Меняла", 300),
+            ("name", t("hist.col_program"), 200), ("count", t("hist.col_count"), 90),
+            ("last", t("hist.col_last"), 130), ("values", t("hist.col_values"), 300),
         ):
             self.prog_tree.heading(col, text=title)
             self.prog_tree.column(col, width=width, anchor="w", stretch=(col == "values"))
@@ -1232,10 +1279,13 @@ class HistoryWindow:
         bottom.pack(fill="x", padx=8, pady=(0, 8))
         self.status = tk.Label(bottom, text="", bg=BG, fg=DIM, font=FONT_SMALL, anchor="w")
         self.status.pack(side="left", fill="x", expand=True)
-        tk.Button(bottom, text="CSV", command=self._export, bg="#1b202b", fg=FG,
-                  relief="flat", font=FONT_SMALL, padx=10, cursor="hand2").pack(side="right")
-        tk.Button(bottom, text="Закрыть", command=self.win.destroy, bg="#1b202b", fg=FG,
-                  relief="flat", font=FONT_SMALL, padx=10, cursor="hand2").pack(side="right", padx=6)
+        self.csv_btn = tk.Button(bottom, text="CSV", command=self._export, bg="#1b202b", fg=FG,
+                                 relief="flat", font=FONT_SMALL, padx=10, cursor="hand2")
+        self.csv_btn.pack(side="right")
+        self.close_btn = tk.Button(bottom, text=t("hist.close"), command=self.win.destroy,
+                                   bg="#1b202b", fg=FG, relief="flat", font=FONT_SMALL,
+                                   padx=10, cursor="hand2")
+        self.close_btn.pack(side="right", padx=6)
 
         self.win.protocol("WM_DELETE_WINDOW", self.win.destroy)
         self.refresh()
@@ -1251,14 +1301,28 @@ class HistoryWindow:
         self.win.lift()
         self.win.focus_force()
 
+    def retranslate(self) -> None:
+        """Пересобрать тексты окна после смены языка."""
+        self.win.title(t("hist.title"))
+        self.nb.tab(0, text=t("hist.tab_changes"))
+        self.nb.tab(1, text=t("hist.tab_programs"))
+        for col, key in (("time", "hist.col_time"), ("kind", "hist.col_kind"),
+                         ("was", "hist.col_old"), ("now", "hist.col_new"),
+                         ("who", "hist.col_who")):
+            self.tree.heading(col, text=t(key))
+        for col, key in (("name", "hist.col_program"), ("count", "hist.col_count"),
+                         ("last", "hist.col_last"), ("values", "hist.col_values")):
+            self.prog_tree.heading(col, text=t(key))
+        self.close_btn.configure(text=t("hist.close"))
+        self.refresh()
+
     def refresh(self) -> None:
         if not self.alive():
             return
         self.tree.delete(*self.tree.get_children())
         for rec in reversed(self.app.history.records[-300:]):
-            kind = {"volume": "громкость", "mute": "mute", "device": "устройство",
-                    "session_start": "открыл микрофон", "session_stop": "закрыл микрофон"}.get(
-                        rec.get("kind"), rec.get("kind", ""))
+            kind_raw = rec.get("kind", "")
+            kind = t(f"hist.kind.{kind_raw}") if kind_raw in HISTORY_KINDS else kind_raw
             was = rec.get("old")
             now = rec.get("new")
             suspect = rec.get("suspect")
@@ -1282,24 +1346,37 @@ class HistoryWindow:
         for name, count, last, values in self.app.history.programs():
             self.prog_tree.insert("", "end", values=(name, count, last, values or "—"))
 
-        self.status.configure(text=f"записей: {len(self.app.history.records)} · "
-                                   f"файл: {self.app.history.path}")
+        self.status.configure(text=t("hist.records", count=len(self.app.history.records),
+                                     path=self.app.history.path))
 
     def _export(self) -> None:
         try:
             path = self.app.history.export_csv()
-            self.status.configure(text=f"CSV: {path}", fg=OK)
+            self.status.configure(text=t("hist.export_ok", path=path), fg=OK)
         except OSError as exc:
-            self.status.configure(text=f"не удалось сохранить: {exc}", fg=BAD)
+            self.status.configure(text=t("hist.export_fail", error=exc), fg=BAD)
 
 
 # ----------------------------------------------------------------------------
 # Приложение
 # ----------------------------------------------------------------------------
 
+def configured_language() -> str:
+    """Язык из конфига, иначе язык системы."""
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        lang = str(data.get("language") or "")
+        if lang in available_languages():
+            return lang
+    except (OSError, json.JSONDecodeError):
+        pass
+    return detect_language()
+
+
 class App:
-    def __init__(self) -> None:
+    def __init__(self, language: str | None = None) -> None:
         self.config = self._load_config()
+        set_language(language or configured_language())
         self.history = History()
         self.logger = Logger()
         self.events: queue.Queue = queue.Queue()
@@ -1376,27 +1453,28 @@ def cli_probe() -> int:
         pass
     backend = AudioBackend()
     default_id = backend.default_id()
-    print("устройства записи:")
+    print(t("cli.probe_devices"))
     for dev_id, name in backend.capture_devices():
         mark = "*" if dev_id == default_id else " "
         print(f" {mark} {name}\n     {dev_id}")
     handle = backend.open(default_id)
     if handle is None:
-        print("нет доступного устройства записи")
+        print(t("cli.no_device"))
         return 1
-    print(f"\nтекущее: {handle.name}")
-    print(f"  громкость: {fmt_volume(handle.volume())}  mute={handle.muted()}")
+    print("\n" + t("cli.current", name=handle.name))
+    print(t("cli.volume", value=fmt_volume(handle.volume()), muted=handle.muted()))
     peaks = []
     for _ in range(10):
         peaks.append(handle.peak())
         time.sleep(0.05)
-    print(f"  пик сигнала: {fmt_volume(max(peaks))}")
+    print(t("cli.peak", value=fmt_volume(max(peaks))))
     sessions = handle.sessions()
-    print(f"  аудио-сессий: {len(sessions)}")
+    print(t("cli.sessions", count=len(sessions)))
     for s in sessions:
-        print(f"    pid {s.pid:>6}  {s.name:<24} {'активна' if s.active else 'inactive'}")
+        state = t("cli.session_active") if s.active else t("cli.session_inactive")
+        print(t("cli.session_line", pid=s.pid, name=s.name, state=state))
     fg = foreground_process()
-    print(f"  активное окно: {fg.name if fg else '—'}")
+    print(t("cli.foreground", name=fg.name if fg else "—"))
     return 0
 
 
@@ -1415,8 +1493,8 @@ def cli_watch(seconds: float) -> int:
             except queue.Empty:
                 continue
             if event["type"] == "state":
-                print(f"\rгромкость {fmt_volume(event['volume'])}  "
-                      f"сигнал {fmt_volume(event['peak'])}  ", end="")
+                print(t("cli.watch_status", volume=fmt_volume(event["volume"]),
+                        peak=fmt_volume(event["peak"])), end="")
             elif event["type"] == "change":
                 seen += 1
                 print()
@@ -1425,15 +1503,17 @@ def cli_watch(seconds: float) -> int:
                 print(f"\n{event['type']}: {event['text']}")
     finally:
         watcher.stop()
-    print(f"\nизменений записано: {seen}\nлог: {Logger().path}\nистория: {history.path}")
+    print(t("cli.watch_done", count=seen, path=Logger().path, history=history.path))
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Оверлей с громкостью микрофона и историей изменений")
-    parser.add_argument("--probe", action="store_true", help="показать устройства и текущие значения")
-    parser.add_argument("--watch", type=float, metavar="SEC", help="лог изменений в консоль без окна")
-    parser.add_argument("--device", metavar="ID", help="id устройства записи (см. --probe)")
+    parser = argparse.ArgumentParser(description=t("cli.description"))
+    parser.add_argument("--probe", action="store_true", help=t("cli.probe_help"))
+    parser.add_argument("--watch", type=float, metavar="SEC", help=t("cli.watch_help"))
+    parser.add_argument("--device", metavar="ID", help=t("cli.device_help"))
+    parser.add_argument("--lang", choices=list(available_languages()),
+                        help="UI language / язык интерфейса")
     parser.add_argument("--version", action="version", version=f"mic-monitor {__version__}")
     args = parser.parse_args(argv)
 
@@ -1441,6 +1521,11 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
+
+    if getattr(args, "lang", None):
+        set_language(args.lang)
+    else:
+        set_language(configured_language())
 
     if args.probe:
         return cli_probe()
@@ -1450,14 +1535,15 @@ def main(argv: list[str] | None = None) -> int:
     if not acquire_single_instance():
         try:
             ctypes.windll.user32.MessageBoxW(
-                None, "mic-monitor уже запущен — смотрите оверлей в углу экрана.",
-                "mic-monitor", 0x40,
+                None, t("msg.already_running"), t("msg.already_running_title"), 0x40,
             )
         except Exception:
-            print("mic-monitor уже запущен")
+            print(t("msg.already_running_console"))
         return 0
 
-    app = App()
+    app = App(getattr(args, "lang", None))
+    if getattr(args, "lang", None):
+        app.config["language"] = current_language()
     if args.device:
         app.device_id = args.device
     app.run()
