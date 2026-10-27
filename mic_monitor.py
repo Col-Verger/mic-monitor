@@ -650,6 +650,51 @@ def play_alert(kind: str) -> None:
             pass
 
 
+RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+RUN_VALUE = "mic-monitor"
+
+
+def launch_command() -> str:
+    """Команда автозапуска: для собранного exe — он сам, для исходников — pythonw + скрипт."""
+    if getattr(sys, "frozen", False):
+        return f'"{sys.executable}"'
+    exe = Path(sys.executable)
+    pyw = exe.with_name("pythonw.exe")
+    if not pyw.exists():
+        pyw = exe
+    return f'"{pyw}" "{Path(__file__).resolve()}"'
+
+
+def autostart_enabled() -> bool:
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
+            value, _ = winreg.QueryValueEx(key, RUN_VALUE)
+        return bool(value)
+    except OSError:
+        return False
+    except Exception:
+        return False
+
+
+def set_autostart(enable: bool) -> bool:
+    """Включить/выключить запуск с Windows. Возвращает новое состояние."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0,
+                            winreg.KEY_SET_VALUE) as key:
+            if enable:
+                winreg.SetValueEx(key, RUN_VALUE, 0, winreg.REG_SZ, launch_command())
+            else:
+                try:
+                    winreg.DeleteValue(key, RUN_VALUE)
+                except FileNotFoundError:
+                    pass
+        return autostart_enabled()
+    except Exception:
+        return autostart_enabled()
+
+
 # ----------------------------------------------------------------------------
 # Фоновый наблюдатель
 # ----------------------------------------------------------------------------
@@ -973,6 +1018,8 @@ class Overlay:
                              variable=tk.BooleanVar(value=bool(self.root.attributes("-topmost"))))
         menu.add_checkbutton(label="Звук при изменении", command=self.toggle_sound,
                              variable=tk.BooleanVar(value=bool(self.cfg.get("sound", True))))
+        menu.add_checkbutton(label="Запускать с Windows", command=self.toggle_autostart,
+                             variable=tk.BooleanVar(value=autostart_enabled()))
         menu.add_separator()
         menu.add_command(label="Открыть лог", command=self._open_log)
         menu.add_command(label="Открыть историю (папка)", command=self._open_folder)
@@ -1001,6 +1048,9 @@ class Overlay:
         self.cfg["sound"] = not bool(self.cfg.get("sound", True))
         if self.cfg["sound"]:
             play_alert("volume")
+
+    def toggle_autostart(self) -> None:
+        self.cfg["autostart"] = set_autostart(not autostart_enabled())
 
     def _open_log(self) -> None:
         try:

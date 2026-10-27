@@ -49,12 +49,19 @@ mic-monitor решает именно это: держит уровень на �
   путь к exe, родительский процесс, активное окно, кто держит микрофон, свежие процессы.
 - **Звук на изменение** (системный, без внешних файлов). Отключается в меню.
 - **Экспорт CSV** и выбор устройства записи из меню.
+- **Автозапуск** с Windows — галочка в меню (то же самое можно включить галочкой в установщике).
 - Перетаскивание мышью, прозрачность/поверх окон, запоминание позиции, одна копия приложения.
 
-## Как запустить
+## Как установить
 
-**Готовый exe:** скачать `MicMonitor.exe` из [Releases](../../releases) и запустить.
-Консольного окна нет: приложение живёт оверлеем поверх всех окон.
+**Установщик (рекомендуется):** скачать `MicMonitor-Setup-1.1.0.exe` из [Releases](../../releases) и запустить.
+
+- права администратора не нужны, ставится в `%LOCALAPPDATA%\Programs\mic-monitor`;
+- ярлык в «Пуск» и (по желанию) на рабочем столе;
+- появляется в «Параметры → Приложения» → удаляется оттуда же;
+- можно сразу поставить галочку «Запускать при входе в Windows».
+
+**Портативная версия:** `MicMonitor.exe` из [Releases](../../releases) — просто запустить, ничего не устанавливается.
 
 **Из исходников:**
 
@@ -120,11 +127,14 @@ Windows **не сообщает**, какой процесс изменил гр
 ## Сборка exe
 
 ```powershell
-.\build.ps1
+.\build.ps1            # dist\MicMonitor.exe (портативный)
+.\build-installer.ps1  # dist\MicMonitor-Setup-<версия>.exe (установщик, Inno Setup)
 ```
 
-Скрипт создаёт/обновляет venv, ставит зависимости, генерирует иконку (`tools/make_icon.py`),
+`build.ps1` создаёт/обновляет venv, ставит зависимости, генерирует иконку (`tools/make_icon.py`),
 собирает `dist\MicMonitor.exe` (один файл, без консоли, с иконкой и версией) и копирует его на рабочий стол.
+`build-installer.ps1` дополнительно собирает установщик по скрипту `installer\mic-monitor.iss`
+(нужен [Inno Setup 6](https://jrsoftware.org/isinfo.php): `winget install --id JRSoftware.InnoSetup -e`).
 
 ## Тесты
 
@@ -150,6 +160,10 @@ with the suspected process name, executable path, and a sound alert on every cha
 Windows gives you no history and no "who did it" event: the level just silently changes when Discord,
 a game, or a vendor panel (Realtek, Nahimic, SteelSeries Sonar, Voicemeeter) touches it. mic-monitor
 keeps the level visible, logs every change with time and evidence, and beeps so you notice.
+
+Install with `MicMonitor-Setup-1.1.0.exe` (no admin rights, per-user install, uninstall from Windows
+Settings) or run the portable `MicMonitor.exe`. Optional "start with Windows" toggle in both the
+installer and the app menu.
 
 Attribution is a documented heuristic (foreground window, processes holding the mic, freshly started
 processes, known audio control panels) with an explicit confidence label. Everything is logged to

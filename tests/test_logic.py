@@ -25,6 +25,7 @@ from mic_monitor import (  # noqa: E402
     detect_changes,
     fmt_value,
     fmt_volume,
+    launch_command,
     play_alert,
     primary_suspect,
     score_candidates,
@@ -150,6 +151,13 @@ class LoggerTest(unittest.TestCase):
             self.assertIn("виновник: Discord.exe", text)
             self.assertIn("держат микрофон: Discord.exe(3)", text)
             self.assertIn("активное окно: chrome.exe", text)
+
+
+class LaunchCommandTest(unittest.TestCase):
+    def test_quoted_and_points_to_script(self):
+        cmd = launch_command()
+        self.assertTrue(cmd.startswith('"'))
+        self.assertIn("mic_monitor.py", cmd)
 
 
 class AlertTest(unittest.TestCase):

@@ -1,7 +1,7 @@
-VSVersionInfo(
+﻿VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 0, 0),
-    prodvers=(1, 0, 0, 0),
+    filevers=(1, 1, 0, 0),
+    prodvers=(1, 1, 0, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -16,13 +16,13 @@ VSVersionInfo(
           '040904B0',
           [
             StringStruct('CompanyName', 'mic-monitor contributors'),
-            StringStruct('FileDescription', 'mic-monitor — оверлей громкости микрофона'),
-            StringStruct('FileVersion', '1.0.0.0'),
+            StringStruct('FileDescription', 'mic-monitor вЂ” РѕРІРµСЂР»РµР№ РіСЂРѕРјРєРѕСЃС‚Рё РјРёРєСЂРѕС„РѕРЅР°'),
+            StringStruct('FileVersion', '1.1.0.0'),
             StringStruct('InternalName', 'MicMonitor'),
             StringStruct('LegalCopyright', 'MIT License'),
             StringStruct('OriginalFilename', 'MicMonitor.exe'),
             StringStruct('ProductName', 'MicMonitor'),
-            StringStruct('ProductVersion', '1.0.0.0')
+            StringStruct('ProductVersion', '1.1.0.0')
           ]
         )
       ]
