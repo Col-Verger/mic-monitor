@@ -1,0 +1,106 @@
+name: build
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: тесты
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: зависимости
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: юнит-тесты
+        run: python -m unittest discover -s tests -v
+
+  release:
+    name: exe + установщик
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: зависимости сборки
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: версия из тега
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          "VERSION=$version" >> $env:GITHUB_ENV
+          Write-Host "версия: $version"
+
+      - name: версия в коде совпадает с тегом
+        shell: pwsh
+        run: |
+          $app = (python -c "import mic_monitor; print(mic_monitor.__version__)").Trim()
+          if ($app -ne $env:VERSION) {
+            throw "mic_monitor.__version__ = $app, а тег ${{ github.ref_name }}. Обновите __version__ перед тегом."
+          }
+
+      - name: иконка и файл версии
+        shell: pwsh
+        run: |
+          python tools/make_icon.py
+          python tools/make_version_info.py $env:VERSION build/version_info.txt
+
+      - name: exe
+        run: >
+          python -m PyInstaller --noconfirm --clean --onefile --noconsole
+          --name MicMonitor --icon mic.ico
+          --version-file build/version_info.txt mic_monitor.py
+
+      - name: Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: установщик
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$env:VERSION" "installer\mic-monitor.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed: $LASTEXITCODE" }
+
+      - name: проверка артефактов
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist\MicMonitor.exe")) { throw "нет dist\MicMonitor.exe" }
+          $setup = Get-ChildItem "dist\MicMonitor-Setup-*.exe"
+          if (-not $setup) { throw "нет установщика" }
+          $setup | ForEach-Object { "{0} — {1:N1} МБ" -f $_.Name, ($_.Length / 1MB) }
+
+      - name: релиз
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/MicMonitor.exe
+            dist/MicMonitor-Setup-*.exe
+          generate_release_notes: true
+          fail_on_unmatched_files: true

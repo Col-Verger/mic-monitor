@@ -1,5 +1,13 @@
 # mic-monitor
 
+[![build](https://github.com/Col-Verger/mic-monitor/actions/workflows/build.yml/badge.svg)](https://github.com/Col-Verger/mic-monitor/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/Col-Verger/mic-monitor)](https://github.com/Col-Verger/mic-monitor/releases/latest)
+[![license](https://img.shields.io/github/license/Col-Verger/mic-monitor)](LICENSE)
+[![windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)](https://github.com/Col-Verger/mic-monitor/releases/latest)
+
+**Скачать:** [установщик](https://github.com/Col-Verger/mic-monitor/releases/latest) ·
+[портативный exe](https://github.com/Col-Verger/mic-monitor/releases/latest)
+
 Маленький оверлей для Windows: показывает **текущую громкость микрофона**, живой **уровень сигнала**
 и **историю того, кто эту громкость менял** — с именем процесса, путём к exe и звуковым сигналом
 на каждое изменение.
@@ -54,14 +62,14 @@ mic-monitor решает именно это: держит уровень на �
 
 ## Как установить
 
-**Установщик (рекомендуется):** скачать `MicMonitor-Setup-1.1.0.exe` из [Releases](../../releases) и запустить.
+**Установщик (рекомендуется):** скачать `MicMonitor-Setup-<версия>.exe` из [Releases](../../releases/latest) и запустить.
 
 - права администратора не нужны, ставится в `%LOCALAPPDATA%\Programs\mic-monitor`;
 - ярлык в «Пуск» и (по желанию) на рабочем столе;
 - появляется в «Параметры → Приложения» → удаляется оттуда же;
 - можно сразу поставить галочку «Запускать при входе в Windows».
 
-**Портативная версия:** `MicMonitor.exe` из [Releases](../../releases) — просто запустить, ничего не устанавливается.
+**Портативная версия:** `MicMonitor.exe` из [Releases](../../releases/latest) — просто запустить, ничего не устанавливается.
 
 **Из исходников:**
 
@@ -135,6 +143,10 @@ Windows **не сообщает**, какой процесс изменил гр
 собирает `dist\MicMonitor.exe` (один файл, без консоли, с иконкой и версией) и копирует его на рабочий стол.
 `build-installer.ps1` дополнительно собирает установщик по скрипту `installer\mic-monitor.iss`
 (нужен [Inno Setup 6](https://jrsoftware.org/isinfo.php): `winget install --id JRSoftware.InnoSetup -e`).
+
+Версия берётся из `mic_monitor.__version__`; проверка и сборка релиза идут автоматически:
+`.github/workflows/build.yml` прогоняет тесты на каждый push и PR, а на тег `v*` собирает exe и
+установщик и прикрепляет их к релизу (`git tag v1.2.0 && git push origin v1.2.0`).
 
 ## Тесты
 

@@ -5,7 +5,9 @@
 
 #define AppName "mic-monitor"
 #define AppExeName "MicMonitor.exe"
-#define AppVersion "1.1.0"
+#ifndef AppVersion
+  #define AppVersion "1.1.0"
+#endif
 #define AppPublisher "Col-Verger"
 #define AppURL "https://github.com/Col-Verger/mic-monitor"
 

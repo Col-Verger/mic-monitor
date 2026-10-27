@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 APP_NAME = "MicMonitor"
+__version__ = "1.2.0"
 APP_DIR = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / APP_NAME
 HISTORY_FILE = APP_DIR / "history.jsonl"
 CONFIG_FILE = APP_DIR / "config.json"
@@ -1433,6 +1434,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--probe", action="store_true", help="показать устройства и текущие значения")
     parser.add_argument("--watch", type=float, metavar="SEC", help="лог изменений в консоль без окна")
     parser.add_argument("--device", metavar="ID", help="id устройства записи (см. --probe)")
+    parser.add_argument("--version", action="version", version=f"mic-monitor {__version__}")
     args = parser.parse_args(argv)
 
     try:

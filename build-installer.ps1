@@ -1,4 +1,5 @@
 param(
+    [string] $Version = "",
     [switch] $SkipApp
 )
 
@@ -6,9 +7,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$python = Join-Path $root '.venv\Scripts\python.exe'
 
 if (-not $SkipApp) {
-    & pwsh -NoProfile -File (Join-Path $root 'build.ps1')
+    & pwsh -NoProfile -File (Join-Path $root 'build.ps1') -Version $Version -NoDesktopCopy
+}
+
+if (-not $Version) {
+    $Version = (& $python -c "import sys; sys.path.insert(0, r'$root'); import mic_monitor; print(mic_monitor.__version__)").Trim()
 }
 
 $iscc = @(
@@ -21,7 +27,7 @@ if (-not $iscc) {
     throw "Не найден ISCC.exe. Установите Inno Setup 6: winget install --id JRSoftware.InnoSetup -e"
 }
 
-& $iscc (Join-Path $root 'installer\mic-monitor.iss') | Select-Object -Last 6
+& $iscc "/DAppVersion=$Version" (Join-Path $root 'installer\mic-monitor.iss') | Select-Object -Last 4
 if ($LASTEXITCODE -ne 0) { throw "ISCC завершился с кодом $LASTEXITCODE" }
 
 Get-ChildItem (Join-Path $root 'dist') -Filter 'MicMonitor-Setup-*.exe' |

@@ -1,0 +1,59 @@
+name: Bug report
+description: Что-то не работает или ведёт себя странно
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо! Чем точнее данные — тем быстрее починим.
+        Если проблема в определении «виновника», сначала загляните в
+        `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` — там видно, что приложение видело в момент изменения.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось
+      description: Ожидаемое и фактическое поведение
+      placeholder: |
+        Ожидал: изменение громкости показывает Discord.
+        Получил: виновник «не определён».
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить
+      placeholder: |
+        1. Открыть Discord
+        2. Зайти в настройки → Голос
+        3. Двинуть ползунок микрофона
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия
+      description: Из `MicMonitor.exe --version`, свойств exe или окна истории
+      placeholder: "1.1.0"
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows
+      placeholder: "Windows 11 23H2"
+
+  - type: input
+    id: device
+    attributes:
+      label: Устройство записи
+      description: Имя из оверлея или из `--probe`
+      placeholder: "Микрофон (USB PnP Audio Device)"
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Фрагмент лога
+      description: Несколько строк из `%LOCALAPPDATA%\MicMonitor\mic-monitor.log` вокруг проблемы
+      render: text
